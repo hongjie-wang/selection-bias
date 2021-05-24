@@ -1,0 +1,115 @@
+---
+title: "selection-bias"
+author: "Hongjie Wang"
+date: "May 23, 2021"
+output: ioslides_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## Objectives
+
+We provide an outline for a future project and research report on selection issues in modeling. 
+
+We will focus on the following:
+
+* Use reject inference in risk modeling and campaign selection in marketing campaigns as two case studies 
+
+* Understand the (differences in) impacts in casual inference and predictions (and the decisions based on either the inference or the predictions)
+
+* The connection and differences between sample-selection and endogeneity
+
+* Linkage with counter-factual framework, casual network framework, econometric approaches (such as heckman two steps, instrument variables) and missing data framework 
+
+
+## Reject Inference in Credit risk Modeling 
+
+In application scorecard development, we need to start with data. Consider the following data generation Process
+
+* Receive applications from general population (A)
+* A subset of A would be approved by the current underwriting system (B)
+* A-B are rejected
+* For accounts in B, we observe for a period of time (say a year) and record delinquent status
+* The new scorecard model is built using B (delinquent~ application attributes)
+* This new model will be used as part of new underwriting system to screen all future applicants (a future version of A)
+
+Ideally, we would accept all applications (or stratified random sampling) to collect data. Banks do that from time to time. In general,that would be too expensive and reject inference will be handled with modeling or other data augmentation. 
+
+## Some Useful References in Risk Scorecards (not PD in CCAR)
+
+*Advanced Credit Risk Analysis and Management by Ciby Joseph
+
+*Credit Risk Analytics, Measurement Techniques, Applications and Examples in SAS bBaesens et. al. 
+
+*Credit Scoring and Its Applications by Thomas et. al. 
+
+*Credit Scoring Toolkit by Anderson
+
+*Building and Implementing Better Credit Risk Scorecards by Naeem Siddiqi
+
+## Campaign Response Modeling  
+
+A very similar situation in marketing where the sample used for modeling was based on past model based selections. 
+
+See
+How Current Targeting can hinder Targeting in the future and what to do about it by Rhee & McIntyre (Database Marketing & Customer Strategy Management 2009)
+
+## Solutions  
+
+* Selection occurred, but is independent of the issues or outcomes of our interests --> do not matter
+
+
+* Selection occurred, but there is nothing we can do about. Random sampling would be impossible --> use model, do the best you can to make adjustments. But you have to make assumptions and no one knows for sure the impact. 
+
+* Selection occurred and it is possible to perform random sample (or some variants). Estimate the costs/benefits based on the impact of the decisions that you will make under different models using different data samples. Unless you publish a paper, a pure approach to avoiding bias for its own sake is naive. 
+
+* For prediction, causal variables would be nice, but not necessary. In reject inference, your concern is that your model will give biased prediction for a future application in that way that costs bank money. 
+
+* For inference problems (and using observational data for inference in general), your concern is the wrong conclusions would be drawn. 
+
+
+## Endogeneity
+Suppose we set up $demand=\beta_0 + \beta_1* price +\gamma_1 *convention+error$. Hotel manager may change price in light of competition to boost demand. Without including competition would make price endogenous and the results biased. Price would be correlated with the error term. 
+
+![end](end.png)
+
+
+## Selection 
+
+Selection is a different situation. In this case, data is censored due to selection (self or by others). We do not observe the default behavior of applications that were not accepted. 
+
+But sometimes, these two concepts could be confusing since the endogenous variable is due to selection. And the underlying mathematical structures have similarity as well. 
+
+For example, suppose instead of randomly assign customers to pricing A vs. B, we have a set of rules (based on intuition or other models) to assign the pricing. We then end up a data set where we need to make inference on the optimal pricing for each person. In this case, there is selection bias. And due to the selection, the pricing variable is endogenous. 
+
+## Case 1 Identifiable Confounders --> adjust for them
+
+* Without $Z$ in the model,its effect would end up in error term and leads to correlation between predictor and error term.
+
+* The presence of confounder $Z$ would induce association between treatment and $y$ even when there is none. 
+
+* We require $treatment$ to be independnet of the potential outcome of $y$. 
+
+* Using Pearl's framework,backdoor criteria has to be satsified. With $Z$ there is a backdoor path that is not colinder. It has to be blocked.
+
+
+![case1](case1.png)
+
+## Why NOT just adjust for everything? 
+
+## Case 2: Selection with known rules
+![case2](case2.png)
+## Slide with R Output
+
+```{r cars, echo = TRUE}
+summary(cars)
+```
+
+## Slide with Plot
+
+```{r pressure}
+plot(pressure)
+```
+
