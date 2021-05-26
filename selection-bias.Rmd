@@ -1,13 +1,14 @@
 ---
-title: "selection-bias"
+title: "Selection Models"
 author: "Hongjie Wang"
-date: "May 23, 2021"
-output: ioslides_presentation
+date: "May 24, 2021"
+output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(echo = TRUE)
 ```
+
 
 ## Objectives
 
@@ -99,17 +100,85 @@ For example, suppose instead of randomly assign customers to pricing A vs. B, we
 
 ## Why NOT just adjust for everything? 
 
-## Case 2: Selection with known rules
+## Case 2: Selection with known rules (predictive modeling)
+
+In the context of predictive modeling, we only have data where $S=1$. 
+
+Notice $p(S|X,Z)=P(S|X,Z,Y)$. 
+
+Therefore $p(y|X,Z,S)=\frac{p(y|X,Z)p(S|X,Z,y)}{p(S|X,Z)}=p(y|X,Z)$
+
+This implies the conditional density of $y$ given $X,Z$ is independent of $S$(selection).
+
 ![case2](case2.png)
-## Slide with R Output
+
+## Case 2: Selection with known rules (predictive modeling) Continued
+
+* $p(y|X,Z,S)=\frac{p(y|X,Z)p(S|X,Z,y)}{p(S|X,Z)}=p(y|X,Z)$ implies y is missing at random. This is true for situation where selection is based on $g(X,Z)>C$. 
+
+* We therefore do not observe $y$ at all for certain level of the condiitonal mean. But for the ones we do, we observe entire distribution of $y$ (and hence random). See the following graph for illustration. 
+
+![case2a](case2a.png)
+
+## Case 2: Selection with known rules (predictive modeling) Continued
+
+* Missing at random sill is a form of missing data
+
+* The sample means for all $X,Z,y$ are not the same in the general poplation 
+
+* MAR allows us to estimate the effects of $X, Z$ consistently. But we still do NOT know the correct functioal form for $p(y|X,Z)$ in the population where $S=0$. Therefore, we are still extropolating. Extropolation should be dealt with like a special case of covariate shifting.
+
+* One incorrect view is that using selected sample, we will misspecify the functional form. True, but I argue that we will always do that, even in the case of observing the entire population. 
+
+
+
+![case2a](case2a.png)
 
 ```{r cars, echo = TRUE}
-summary(cars)
+
+library(HydeNet)
+net<-HydeNetwork(~y|Z*X+selection|Z*X)
+equation1<-"0.5+0.5*X+1.2*Z"
+equation2<-"-0.5-2.5*X+3.4*Z"
+net<-setNode(net,X,nodeType = "dnorm",mean=0,tau=100)
+net<-setNode(net,Z,nodeType = "dnorm",mean=0,tau=1000)
+net<-setNode(net,selection,nodeType="dbern",
+             prob=paste("ilogit(",equation1,")"),validate=FALSE)
+net<-setNode(net,y,nodeType = "dbern",
+             prob=paste("ilogit(",equation2,")"),validate=FALSE)
+trackedVars<-c("Z","y","X","selection")
+evidence=NULL
+compiledNet<-compileJagsModel(net,data=evidence,n.chain=3,n.adapt=5000)
+post<-HydeSim(compiledNet,variable.names =trackedVars,n.iter=50000)
+glm(y~X+Z,data=post,family=binomial)
+post_selected<-post[post$selection==1,]
+glm(y~X+Z,data=post_selected,family=binomial)
+
+
 ```
 
-## Slide with Plot
+* In the case of MAR (missing at random) the effect of casual effects of $X,Z$ on $y$ can be consistently estimated using completed records (selection=1) only. 
 
-```{r pressure}
-plot(pressure)
+* How could we estimate the effect of $X$ on $y$ when we do not observe the entire range?
+    + The consistent estimator is itslef conditinoned on in the sample. 
+    + We condition on $X,Z$ and therefore require to know the correct functional form. This is an assumption. But we may such an assumption even if we do not have missing data.
+  * It remains valid that the causal effect of $X,Z$ on $y$ is estimated consistently in the sample we observed. This is a bit like effect of the treated. 
+  
+* The joint distribution clearly $(y,X,Z)$ cannot be recovered. For example, if we select based on $X,Z$ (just imagine in credit risk modeling, $X,Y$ could be historical model scores), then, the means of $y,X,Z$ in the completed records will be different from the genernal population.
+
+* Can we extrpolate this effect of treated  to treatment effect? Is this the same problem we face in the case of predictive modeling? 
+
+Consider the following example: 
+
+```{r extropolation, echo = TRUE}
+library(tidyverse)
+mydata<-data.frame(x=rnorm(1000,0,1))
+
+mydata%>%
+  mutate(xbeta=ifelse(x<=0,2+4*x,2-3*x),
+         y=xbeta+rnorm(1000,0,0.5))%>%
+  ggplot() +geom_point(aes(x = x, y = y))
+
 ```
 
+If we had the entire data, we might use a piece-wise linear or quadratic function to model the relationship between $y$ and $x$. Suppose we select data based on $x<0$. It is obvious that the casual inference or prediction we obtained in the sample cannot extropolate into the entire population. However, this does not contradict the fact that we could consistently estiamte the casual effect of $x$ on $y$ in the selected sample. We will show later that this is not the case when we have missing NOT at random.  
